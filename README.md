@@ -1,10 +1,9 @@
 - 👋 Hi, I’m @Kirankumar2025
-- 👀 I’m interested in data analysis
-- 🌱 I’m currently learning SQL & Python 
+- 👀 I’m a data analysis
+- 🌱 SQL & Python 
 - 💞️ I’m looking to collaborate on business analysis
-- 📫 How to reach me linked in 
-- 😄 Pronouns: He/Him 
-- ⚡ Fun fact: Crack tech jokes
+- 📫 How to reach me linked in  https://www.linkedin.com/in/kirankumar-gosavi-6749bb121/
+  
 
 <!---
 Kirankumar2025/Kirankumar2025 is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
