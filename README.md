@@ -1,5 +1,5 @@
 - 👋 Hi, I’m @Kirankumar2025
-- 👀 I’m a data analysis
+- 👀 I’m a data analyst
 - 🌱 SQL & Python 
 - 💞️ I’m looking to collaborate on business analysis
 - 📫 How to reach me linked in  https://www.linkedin.com/in/kirankumar-gosavi-6749bb121/
