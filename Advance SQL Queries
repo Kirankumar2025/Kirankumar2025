@@ -1,0 +1,223 @@
+Certainly! Here’s a README.md formatted for a GitHub project, incorporating the advanced SQL techniques discussed:
+
+```markdown
+# Advanced SQL Techniques
+
+This repository contains examples of advanced SQL techniques using a sample database schema. These techniques include window functions, Common Table Expressions (CTEs), recursive CTEs, transactions, stored procedures, and user-defined functions.
+
+## Database Schema
+
+The following schema is used in the examples:
+
+```sql
+-- Table: CUSTOMER
+CREATE TABLE CUSTOMER (
+    CUSTOMERID INTEGER NOT NULL,
+    LASTNAME VARCHAR(20),
+    FIRSTNAME VARCHAR(20),
+    CITY VARCHAR(15),
+    STATE VARCHAR(10),
+    COUNTRY VARCHAR(10),
+    MARITALSTATUS VARCHAR(1),
+    YEARLYINCOME VARCHAR(15),
+    GENDER VARCHAR(1),
+    EDUCATION VARCHAR(25),
+    CONSTRAINT P_CUSTOMER PRIMARY KEY (CUSTOMERID)
+);
+
+-- Table: PRODUCT
+CREATE TABLE PRODUCT (
+    PRODUCTID INTEGER NOT NULL,
+    PNAME VARCHAR(50),
+    BRAND VARCHAR(15),
+    SUBCATEGORY VARCHAR(25),
+    CATEGORY VARCHAR(25),
+    DEPARTMENT VARCHAR(25),
+    FAMILY VARCHAR(25),
+    CONSTRAINT P_PRODUCT PRIMARY KEY (PRODUCTID)
+);
+
+-- Table: STORE
+CREATE TABLE STORE (
+    STOREID INTEGER NOT NULL,
+    STYPE VARCHAR(20),
+    SNAME VARCHAR(10),
+    CITY VARCHAR(15),
+    STATE VARCHAR(10),
+    COUNTRY VARCHAR(10),
+    CONSTRAINT P_STORE PRIMARY KEY (STOREID)
+);
+
+-- Table: TIMEBYDAY
+CREATE TABLE TIMEBYDAY (
+    TIMEID INTEGER NOT NULL,
+    TMONTH VARCHAR(15),
+    TYEAR INTEGER,
+    TDAYOFMONTH INTEGER,
+    TMONTHNUMBER INTEGER,
+    TQUARTER VARCHAR(6),
+    CONSTRAINT P_TIMEBYDAY PRIMARY KEY (TIMEID)
+);
+
+-- Table: SALES
+CREATE TABLE SALES (
+    PRODUCTID INTEGER NOT NULL,
+    TIMEID INTEGER NOT NULL,
+    CUSTOMERID INTEGER NOT NULL,
+    STOREID INTEGER NOT NULL,
+    STORESALES DECIMAL(13,2) NOT NULL,
+    UNITSALES INTEGER NOT NULL,
+    CONSTRAINT F_FK_CUSTOMER FOREIGN KEY (CUSTOMERID) REFERENCES CUSTOMER (CUSTOMERID),
+    CONSTRAINT F_FK_PRODUCT FOREIGN KEY (PRODUCTID) REFERENCES PRODUCT (PRODUCTID),
+    CONSTRAINT F_FK_STORE FOREIGN KEY (STOREID) REFERENCES STORE (STOREID),
+    CONSTRAINT F_FK_TIME FOREIGN KEY (TIMEID) REFERENCES TIMEBYDAY (TIMEID)
+);
+```
+
+## 1. Window Functions
+
+Window functions perform calculations across a set of table rows related to the current row. They are useful for tasks like running totals, moving averages, and ranking.
+
+### Example: Running Total of Sales by Product by Month in 2023
+
+```sql
+SELECT P.PRODUCTID, P.PNAME, T.TMONTH, 
+       SUM(S.STORESALES) OVER (PARTITION BY P.PRODUCTID ORDER BY T.TMONTHNUMBER) AS RunningTotalSales
+FROM SALES S
+JOIN PRODUCT P ON S.PRODUCTID = P.PRODUCTID
+JOIN TIMEBYDAY T ON S.TIMEID = T.TIMEID
+WHERE T.TYEAR = 2023
+ORDER BY P.PRODUCTID, T.TMONTHNUMBER;
+```
+
+## 2. Common Table Expressions (CTEs)
+
+CTEs provide a temporary result set that can be referenced within a SELECT, INSERT, UPDATE, or DELETE statement. They are useful for breaking down complex queries.
+
+### Example: Filter Products with Total Sales Over $1000
+
+```sql
+WITH ProductSales AS (
+    SELECT P.PRODUCTID, P.PNAME, SUM(S.STORESALES) AS TotalSales
+    FROM SALES S
+    JOIN PRODUCT P ON S.PRODUCTID = P.PRODUCTID
+    GROUP BY P.PRODUCTID, P.PNAME
+)
+SELECT *
+FROM ProductSales
+WHERE TotalSales > 1000;
+```
+
+## 3. Recursive CTEs
+
+Recursive CTEs are used to query hierarchical data, such as organizational charts or tree structures.
+
+### Example: Department Hierarchy
+
+```sql
+-- Assuming we have a DEPARTMENT table with columns: DEPARTMENTID, DEPARTMENTNAME, PARENTID
+CREATE TABLE DEPARTMENT (
+    DEPARTMENTID INTEGER NOT NULL,
+    DEPARTMENTNAME VARCHAR(25),
+    PARENTID INTEGER,
+    CONSTRAINT P_DEPARTMENT PRIMARY KEY (DEPARTMENTID)
+);
+
+WITH RECURSIVE DepartmentHierarchy AS (
+    SELECT DEPARTMENTID, DEPARTMENTNAME, PARENTID, 0 AS Level
+    FROM DEPARTMENT
+    WHERE PARENTID IS NULL
+    UNION ALL
+    SELECT D.DEPARTMENTID, D.DEPARTMENTNAME, D.PARENTID, DH.Level + 1
+    FROM DEPARTMENT D
+    JOIN DepartmentHierarchy DH ON D.PARENTID = DH.DEPARTMENTID
+)
+SELECT *
+FROM DepartmentHierarchy
+ORDER BY Level, DEPARTMENTNAME;
+```
+
+## 4. Transactions
+
+Transactions ensure a sequence of SQL statements are executed as a single unit of work, which is crucial for maintaining data integrity.
+
+### Example: Update Yearly Income and Log Change
+
+```sql
+BEGIN TRANSACTION;
+
+-- Assuming an audit table CUSTOMER_AUDIT with columns: CUSTOMERID, OLD_INCOME, NEW_INCOME, CHANGE_DATE
+CREATE TABLE CUSTOMER_AUDIT (
+    CUSTOMERID INTEGER NOT NULL,
+    OLD_INCOME VARCHAR(15),
+    NEW_INCOME VARCHAR(15),
+    CHANGE_DATE TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Update the customer's yearly income
+UPDATE CUSTOMER
+SET YEARLYINCOME = '60000'
+WHERE CUSTOMERID = 1;
+
+-- Insert the change into the audit table
+INSERT INTO CUSTOMER_AUDIT (CUSTOMERID, OLD_INCOME, NEW_INCOME)
+SELECT CUSTOMERID, YEARLYINCOME, '60000'
+FROM CUSTOMER
+WHERE CUSTOMERID = 1;
+
+COMMIT;
+```
+
+## 5. Stored Procedures
+
+Stored procedures are reusable SQL code that can be executed with parameters, enhancing modularity and performance.
+
+### Example: Retrieve Sales Data for a Specific Year
+
+```sql
+CREATE PROCEDURE GetSalesByYear (@Year INT)
+AS
+BEGIN
+    SELECT P.PNAME, SUM(S.STORESALES) AS TotalSales
+    FROM SALES S
+    JOIN PRODUCT P ON S.PRODUCTID = P.PRODUCTID
+    JOIN TIMEBYDAY T ON S.TIMEID = T.TIMEID
+    WHERE T.TYEAR = @Year
+    GROUP BY P.PNAME
+    ORDER BY TotalSales DESC;
+END;
+
+-- Execute the stored procedure
+EXEC GetSalesByYear @Year = 2023;
+```
+
+## 6. User-Defined Functions
+
+User-defined functions (UDFs) encapsulate logic for reuse in SQL statements, similar to functions in programming languages.
+
+### Example: Calculate Total Sales for a Customer
+
+```sql
+CREATE FUNCTION dbo.GetCustomerTotalSales (@CustomerID INT)
+RETURNS DECIMAL(13,2)
+AS
+BEGIN
+    DECLARE @TotalSales DECIMAL(13,2);
+    
+    SELECT @TotalSales = SUM(S.STORESALES)
+    FROM SALES S
+    WHERE S.CUSTOMERID = @CustomerID;
+
+    RETURN @TotalSales;
+END;
+
+-- Use the function
+SELECT dbo.GetCustomerTotalSales(1) AS TotalSalesForCustomer;
+```
+
+## Conclusion
+
+Mastering advanced SQL techniques like window functions, CTEs, recursive CTEs, transactions, stored procedures, and functions can significantly enhance your ability to manage and analyze data efficiently. By incorporating these techniques into your SQL toolkit, you can handle complex data scenarios with ease and precision. Happy querying!
+```
+
+You can copy and paste this content into a `README.md` file in your GitHub project to provide a comprehensive overview of advanced SQL techniques.
